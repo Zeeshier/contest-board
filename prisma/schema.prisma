@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  avatar    String   // Generated from team name
+  createdAt DateTime @default(now())
+  
+  categories   Category[]
+  activityLogs ActivityLog[]
+  taskStatuses TaskStatus[]
+  
+  @@map("teams")
+}
+
+model Category {
+  id             String   @id @default(cuid())
+  name           String   // Web, Android, Core, Global
+  teamId         String
+  tasksCompleted Int      @default(0) // 0-3 for specific categories, sum for Global
+  lastActive     DateTime @default(now())
+  
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  @@unique([teamId, name])
+  @@map("categories")
+  @@index([name, tasksCompleted, lastActive])
+}
+
+model TaskStatus {
+  id          String   @id @default(cuid())
+  teamId      String
+  category    String   // Web, Android, Core (not Global)
+  taskNumber  Int      // 1, 2, or 3
+  completedAt DateTime @default(now())
+  commitHash  String?  // Optional: track which commit completed the task
+  
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  @@unique([teamId, category, taskNumber])
+  @@map("task_statuses")
+  @@index([category, completedAt])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  teamId    String
+  category  String
+  message   String
+  points    Int      // Keep for backward compatibility, will show task number instead
+  timestamp DateTime @default(now())
+  
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  @@map("activity_logs")
+  @@index([timestamp])
+}
